@@ -8,6 +8,9 @@ class BmiRecord(models.Model):
     bmi_value = models.FloatField()
     category = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Add this new line right here:
+    session_key = models.CharField(max_length=40, null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} - {self.bmi_value}"
