@@ -125,3 +125,35 @@ def calculator_view(request):
         'file_results': file_results,
         'file_description': file_description
     })
+def specialists(request):
+    # Roster of expert medical nutritionist and dietitian profiles
+    doctors = [
+        {
+            "name": "Dr. Ananya Sharma",
+            "role": "Clinical Nutritionist & Weight Optimization Expert",
+            "experience": "12+ Years",
+            "email": "dr.ananya@vitalityhub.com",
+            "phone": "+91 98765 43210",
+            "specialty": "Metabolic Disorders & Strategic Weight Management",
+            "bio": "Specializes in customizing medical nutrition strategies for insulin resistance, metabolic recovery, and thyroid management."
+        },
+        {
+            "name": "Dr. Vikram Malhotra",
+            "role": "Sports Nutritionist & Lean Mass Performance Coach",
+            "experience": "8+ Years",
+            "email": "dr.vikram@vitalityhub.com",
+            "phone": "+91 87654 32109",
+            "specialty": "Athletic Conditioning, Nutrient Timing, & Muscle Gain",
+            "bio": "Helps health-conscious individuals and elite athletes hit strength indices via high-protein nutrient-dense optimization."
+        },
+        {
+            "name": "Dr. Priya Nair",
+            "role": "Holistic Dietitian & Gut Health Researcher",
+            "experience": "10+ Years",
+            "email": "dr.priya@vitalityhub.com",
+            "phone": "+91 76543 21098",
+            "specialty": "Microbiome Health, Plant-Based Nutrition, & Mindful Eating",
+            "bio": "Passionate about correcting gut inflammation, food sensitivities, and digestive health using natural whole-food protocols."
+        }
+    ]
+    return render(request, 'calculator/specialists.html', {'doctors': doctors})
