@@ -60,57 +60,68 @@ def calculator_view(request):
             }
 
         # --- FEATURE 2: FILE UPLOAD HANDLING ---
+        # --- FEATURE 2: FILE UPLOAD HANDLING ---
         elif 'file_submit' in request.FILES:
             uploaded_file = request.FILES['file_submit']
             
-            # Read file data as text stream
+            # Read file data as text stream safely
             file_data = uploaded_file.read().decode('utf-8')
             csv_data = csv.reader(io.StringIO(file_data))
             
-            # Skip header row if it contains text fields
-            first_row = next(csv_data, None)
-            
             rows_to_process = []
-            if first_row:
-                # Basic check: if first row is data (not labels), keep it
-                try:
-                    float(first_row[1]) # check if weight field is a number
-                    rows_to_process.append(first_row)
-                except (ValueError, IndexError):
-                    pass # It's a header line, skip it safely
-            
-            # Read remaining rows
             for row in csv_data:
-                if row: rows_to_process.append(row)
+                # We need at least 4 columns (Name, Age, Height, Weight)
+                if not row or len(row) < 4:
+                    continue
+                
+                # Clean up white spaces
+                cleaned_row = [item.strip() for item in row]
+                
+                # Skip the header row if it contains words instead of numbers
+                if "name" in cleaned_row[0].lower() or "age" in cleaned_row[1].lower():
+                    continue
+                    
+                rows_to_process.append(cleaned_row)
             
-            # Cap at maximum 10 names as requested
+            # Cap at maximum 10 names
             for row in rows_to_process[:10]:
                 try:
-                    name = row[0].strip()
-                    weight = float(row[1])
-                    height = float(row[2])
+                    name = row[0]
+                    # row[1] is Age, which we don't need for the math, so we skip it!
+                    height = float(row[2]) # Height is the 3rd column
+                    weight = float(row[3]) # Weight is the 4th column
                     
-                    bmi = round(weight / ((height / 100) ** 2), 2)
+                    if weight <= 0 or height <= 0:
+                        continue
+                        
+                    # Standard Metric Formula
+                    height_in_meters = height / 100
+                    bmi = round(weight / (height_in_meters ** 2), 2)
                     
-                    if bmi < 18.5: cat = 'Underweight'
-                    elif 18.5 <= bmi < 24.9: cat = 'Healthy'
-                    elif 25 <= bmi < 29.9: cat = 'Overweight'
-                    else: cat = 'Unhealthy (Obese)'
+                    if bmi < 18.5: 
+                        cat = 'Underweight'
+                    elif 18.5 <= bmi < 24.9: 
+                        cat = 'Healthy'
+                    elif 25 <= bmi < 29.9: 
+                        cat = 'Overweight'
+                    else: 
+                        cat = 'Unhealthy (Obese)'
                     
                     file_results.append({
                         'name': name, 'bmi_value': bmi, 'category': cat
                     })
                 except (ValueError, IndexError):
-                    continue # Skip structural corruptions gracefully
+                    continue
 
             if file_results:
                 total_people = len(file_results)
                 healthy_count = sum(1 for p in file_results if p['category'] == 'Healthy')
                 file_description = f"Batch processing execution complete. Analyzed metric profiles for {total_people} profile records. Out of these profiles, {healthy_count} are registering within normal healthy benchmarks. The comparative matrix below maps out variations across the entire uploaded data group."
-
+   
     return render(request, 'calculator/calculator.html', {
         'manual_result': manual_result,
-        'diet_plan': diet_plan,
+        'diet_plan'
+        '': diet_plan,
         'file_results': file_results,
         'file_description': file_description
     })
