@@ -171,7 +171,6 @@ def specialists(request):
 
 # Initialize the Gemini Client. 
 # It will look for an environment variable called GEMINI_API_KEY.
-client = genai.Client()
 
 def chat_view(request):
     """Renders the main chatbot template."""
@@ -182,13 +181,20 @@ def chat_ask(request):
     """Handles real-time AJAX requests from the chat interface."""
     if request.method == 'POST':
         try:
+            # 1. Look for the key, and gracefully handle if it's missing locally
+            api_key = os.environ.get('GEMINI_API_KEY')
+            if not api_key:
+                return JsonResponse({'reply': "Development Mode: API Key is missing locally. I only work on the live Render site right now!"})
+                
+            # 2. Initialize the client here, safely inside the function
+            client = genai.Client(api_key=api_key)
+
             data = json.loads(request.body)
             user_message = data.get('message', '').strip()
             
             if not user_message:
                 return JsonResponse({'error': 'Empty message'}, status=400)
             
-            # System instructions force the AI to stay strictly on-topic
             system_instruction = (
                 "You are the VitalityHub AI Health Assistant. You are friendly, professional, "
                 "and informative. Provide helpful, structured advice regarding diet, BMI, fitness, "
@@ -196,7 +202,6 @@ def chat_ask(request):
                 "reminding users to consult a doctor for severe symptoms."
             )
             
-            # Request response generation from the lightweight flash model
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_message,
