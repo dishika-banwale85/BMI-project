@@ -181,12 +181,12 @@ def chat_ask(request):
     """Handles real-time AJAX requests from the chat interface."""
     if request.method == 'POST':
         try:
-            # 1. Look for the key, and gracefully handle if it's missing locally
+            # 1. Verify the key is present in the environment variables
             api_key = os.environ.get('GEMINI_API_KEY')
             if not api_key:
-                return JsonResponse({'reply': "Development Mode: API Key is missing locally. I only work on the live Render site right now!"})
+                return JsonResponse({'reply': "Configuration Error: The server could not find a GEMINI_API_KEY in its environment variables. Please check your Render settings."})
                 
-            # 2. Initialize the client here, safely inside the function
+            # 2. Initialize the client securely
             client = genai.Client(api_key=api_key)
 
             data = json.loads(request.body)
@@ -198,19 +198,24 @@ def chat_ask(request):
             system_instruction = (
                 "You are the VitalityHub AI Health Assistant. You are friendly, professional, "
                 "and informative. Provide helpful, structured advice regarding diet, BMI, fitness, "
-                "and general health metrics. Always add a professional medical disclaimer when appropriate, "
-                "reminding users to consult a doctor for severe symptoms."
+                "and general health metrics. Always add a professional medical disclaimer when appropriate."
             )
             
+            # 3. Request generation
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_message,
                 config={'system_instruction': system_instruction}
             )
             
-            return JsonResponse({'reply': response.text})
+            # 4. Read the text response safely
+            if response and hasattr(response, 'text'):
+                return JsonResponse({'reply': response.text})
+            else:
+                return JsonResponse({'reply': "The AI generated an empty response object. Please try again."})
             
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            # This will print the EXACT error message directly in your chat bubble instead of hiding it!
+            return JsonResponse({'reply': f"Backend Error Code: {str(e)}"})
             
     return JsonResponse({'error': 'Invalid request method'}, status=400)
