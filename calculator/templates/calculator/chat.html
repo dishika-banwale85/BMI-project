@@ -1,0 +1,100 @@
+{% extends 'calculator/base.html' %}
+
+{% block title %}AI Health Assistant - VitalityHub{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto h-[75vh] flex flex-col bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    
+    <div class="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+        <div>
+            <h2 class="text-lg font-bold text-white">VitalityHub AI Assistant</h2>
+            <p class="text-xs text-gray-400">Ask anything about diet plans, BMI indexes, or wellness goals</p>
+        </div>
+    </div>
+
+    <div id="chat-window" class="flex-1 p-6 overflow-y-auto space-y-4 scrollbar-thin">
+        <div class="flex items-start gap-3 max-w-[80%]">
+            <div class="bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 p-3.5 rounded-2xl rounded-tl-none text-sm leading-relaxed shadow-md">
+                Hello! I am your AI Health Assistant. Tell me your fitness goals or ask me about any dietary adjustments, and let's structure a healthy lifestyle plan together!
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-loading" class="hidden px-6 py-2 text-xs text-gray-400 italic flex items-center gap-1">
+        <span class="animate-bounce">●</span><span class="animate-bounce delay-100">●</span><span class="animate-bounce delay-200">●</span> Assistant is generating advice...
+    </div>
+
+    <div class="p-4 bg-black/20 border-t border-white/10">
+        <div class="flex gap-2">
+            <input type="text" id="user-input" placeholder="Type your health question here..." 
+                   class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                   onkeydown="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()" 
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] text-sm flex items-center">
+                Send
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chatWindow = document.getElementById('chat-window');
+    const userInput = document.getElementById('user-input');
+    const chatLoading = document.getElementById('chat-loading');
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // 1. Render User Message on screen
+        appendMessage(text, 'user');
+        userInput.value = '';
+        
+        // 2. Show loading dots
+        chatLoading.classList.remove('hidden');
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        try {
+            // 3. Post to our Django view endpoint
+            const response = await fetch("{% url 'chat_ask' %}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: text })
+            });
+            
+            const data = await response.json();
+            
+            // 4. Render AI Reply
+            if (data.reply) {
+                appendMessage(data.reply, 'ai');
+            } else {
+                appendMessage("I ran into an internal error fetching that recommendation. Please retry.", 'ai');
+            }
+        } catch (error) {
+            appendMessage("Connection error. Ensure your server environment config holds valid access credentials.", 'ai');
+        }
+
+        // 5. Hide loading dots & slide window view down
+        chatLoading.classList.add('hidden');
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function appendMessage(text, sender) {
+        const wrapper = document.createElement('div');
+        wrapper.className = sender === 'user' ? 'flex justify-end' : 'flex items-start gap-3 max-w-[80%]';
+        
+        const bubble = document.createElement('div');
+        if (sender === 'user') {
+            bubble.className = "bg-blue-600 text-white p-3.5 rounded-2xl rounded-tr-none text-sm max-w-[80%] shadow-md leading-relaxed whitespace-pre-line";
+        } else {
+            bubble.className = "bg-white/5 border border-white/10 text-gray-200 p-3.5 rounded-2xl rounded-tl-none text-sm shadow-md leading-relaxed whitespace-pre-line";
+        }
+        
+        bubble.textContent = text;
+        wrapper.appendChild(bubble);
+        chatWindow.appendChild(wrapper);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+</script>
+{% endblock %}

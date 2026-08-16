@@ -1,6 +1,12 @@
 import csv
 import io
 from django.shortcuts import render
+import json
+import os
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from google import genai
+
 
 def home(request):
     return render(request, 'calculator/home.html')
@@ -157,3 +163,49 @@ def specialists(request):
         }
     ]
     return render(request, 'calculator/specialists.html', {'doctors': doctors})
+
+
+
+
+
+
+# Initialize the Gemini Client. 
+# It will look for an environment variable called GEMINI_API_KEY.
+client = genai.Client()
+
+def chat_view(request):
+    """Renders the main chatbot template."""
+    return render(request, 'calculator/chat.html')
+
+@csrf_exempt
+def chat_ask(request):
+    """Handles real-time AJAX requests from the chat interface."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+            
+            if not user_message:
+                return JsonResponse({'error': 'Empty message'}, status=400)
+            
+            # System instructions force the AI to stay strictly on-topic
+            system_instruction = (
+                "You are the VitalityHub AI Health Assistant. You are friendly, professional, "
+                "and informative. Provide helpful, structured advice regarding diet, BMI, fitness, "
+                "and general health metrics. Always add a professional medical disclaimer when appropriate, "
+                "reminding users to consult a doctor for severe symptoms."
+            )
+            
+            # Request response generation from the lightweight flash model
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=user_message,
+                config={'system_instruction': system_instruction}
+            )
+            
+            return JsonResponse({'reply': response.text})
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+            
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
