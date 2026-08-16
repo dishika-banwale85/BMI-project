@@ -172,28 +172,30 @@ def specialists(request):
 # Initialize the Gemini Client. 
 # It will look for an environment variable called GEMINI_API_KEY.
 
+
+
 def chat_view(request):
     """Renders the main chatbot template."""
     return render(request, 'calculator/chat.html')
 
 @csrf_exempt
 def chat_ask(request):
-    """Handles real-time AJAX requests from the chat interface."""
+    """Handles real-time requests from the chat interface safely."""
     if request.method == 'POST':
         try:
-            # 1. Verify the key is present in the environment variables
-            api_key = os.environ.get('GEMINI_API_KEY')
-            if not api_key:
-                return JsonResponse({'reply': "Configuration Error: The server could not find a GEMINI_API_KEY in its environment variables. Please check your Render settings."})
-                
-            # 2. Initialize the client securely
-            client = genai.Client(api_key=api_key)
-
-            data = json.loads(request.body)
-            user_message = data.get('message', '').strip()
+            # 1. Parse incoming message body data
+            try:
+                data = json.loads(request.body)
+                user_message = data.get('message', '').strip()
+            except Exception:
+                user_message = request.POST.get('message', '').strip()
             
             if not user_message:
-                return JsonResponse({'error': 'Empty message'}, status=400)
+                return JsonResponse({'reply': 'Please type a valid message.'})
+            
+            # 2. Initialize GenAI Client inside the view execution block
+            # It implicitly reads GEMINI_API_KEY from the system environment
+            client = genai.Client()
             
             system_instruction = (
                 "You are the VitalityHub AI Health Assistant. You are friendly, professional, "
@@ -201,21 +203,20 @@ def chat_ask(request):
                 "and general health metrics. Always add a professional medical disclaimer when appropriate."
             )
             
-            # 3. Request generation
+            # 3. Generate content execution
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_message,
                 config={'system_instruction': system_instruction}
             )
             
-            # 4. Read the text response safely
             if response and hasattr(response, 'text'):
                 return JsonResponse({'reply': response.text})
             else:
-                return JsonResponse({'reply': "The AI generated an empty response object. Please try again."})
-            
+                return JsonResponse({'reply': "The assistant generated an empty reply object. Please retry."})
+                
         except Exception as e:
-            # This will print the EXACT error message directly in your chat bubble instead of hiding it!
-            return JsonResponse({'reply': f"Backend Error Code: {str(e)}"})
+            # Captures any environment missing key exception or library faults safely
+            return JsonResponse({'reply': f"AI Service Notice: {str(e)}"})
             
     return JsonResponse({'error': 'Invalid request method'}, status=400)
