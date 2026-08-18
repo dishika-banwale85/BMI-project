@@ -184,9 +184,9 @@ def chat_ask(request):
                 "and general health metrics. Always add a professional medical disclaimer when appropriate."
             )
             
-            # 3. Generate content
+            # 3. Generate content execution
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.6-flash',  
                 contents=user_message,
                 config={'system_instruction': system_instruction}
             )
